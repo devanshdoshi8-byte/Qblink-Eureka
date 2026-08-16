@@ -1,0 +1,163 @@
+{
+  "version": 1,
+  "sdk_version": "0.24.0",
+  "path": "/functions/v1/mcp",
+  "auth": {
+    "type": "oauth",
+    "issuer": "https://fvhkpxxahpcofhasfukc.supabase.co/auth/v1",
+    "accepted_audiences": [
+      "authenticated"
+    ]
+  },
+  "mcp": {
+    "server": {
+      "name": "qblink-mcp",
+      "version": "0.1.0",
+      "title": "Qblink"
+    },
+    "tools": [
+      {
+        "name": "list_businesses",
+        "title": "List my businesses",
+        "description": "List the Qblink businesses owned by the signed-in user, with id, name, category and live-visibility settings.",
+        "annotations": {
+          "readOnlyHint": true,
+          "idempotentHint": true,
+          "openWorldHint": false
+        },
+        "inputSchema": {
+          "$schema": "http://json-schema.org/draft-07/schema#",
+          "type": "object",
+          "properties": {}
+        },
+        "outputSchema": null
+      },
+      {
+        "name": "list_queues",
+        "title": "List queues for a business",
+        "description": "List the queues (counters) of a business owned by the signed-in user, including type, status and seating configuration.",
+        "annotations": {
+          "readOnlyHint": true,
+          "idempotentHint": true,
+          "openWorldHint": false
+        },
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "business_id": {
+              "type": "string",
+              "format": "uuid",
+              "description": "Business id from list_businesses."
+            },
+            "include_internal": {
+              "type": [
+                "boolean",
+                "null"
+              ],
+              "description": "Include internal table-size child queues. Defaults to false (counters only)."
+            }
+          },
+          "required": [
+            "business_id",
+            "include_internal"
+          ],
+          "additionalProperties": false,
+          "$schema": "http://json-schema.org/draft-07/schema#"
+        },
+        "outputSchema": null
+      },
+      {
+        "name": "get_queue_status",
+        "title": "Get live queue status",
+        "description": "Live snapshot of one queue: now serving token, number waiting, average wait so far and estimated wait for a new joiner.",
+        "annotations": {
+          "readOnlyHint": true,
+          "idempotentHint": true,
+          "openWorldHint": false
+        },
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "queue_id": {
+              "type": "string",
+              "format": "uuid",
+              "description": "Queue id from list_queues."
+            }
+          },
+          "required": [
+            "queue_id"
+          ],
+          "additionalProperties": false,
+          "$schema": "http://json-schema.org/draft-07/schema#"
+        },
+        "outputSchema": null
+      },
+      {
+        "name": "list_waiting_visitors",
+        "title": "List waiting visitors",
+        "description": "List the people currently in a queue, in join order, with token number, status, party size and how long they have waited.",
+        "annotations": {
+          "readOnlyHint": true,
+          "idempotentHint": true,
+          "openWorldHint": false
+        },
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "queue_id": {
+              "type": "string",
+              "format": "uuid",
+              "description": "Queue id from list_queues."
+            },
+            "limit": {
+              "anyOf": [
+                {
+                  "type": "integer",
+                  "minimum": 1,
+                  "maximum": 100
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Max rows to return. Defaults to 25."
+            }
+          },
+          "required": [
+            "queue_id",
+            "limit"
+          ],
+          "additionalProperties": false,
+          "$schema": "http://json-schema.org/draft-07/schema#"
+        },
+        "outputSchema": null
+      },
+      {
+        "name": "get_business_today_summary",
+        "title": "Today's flow summary",
+        "description": "Aggregate today's customer flow for a business: visitors joined, served, no-shows, cancelled, currently waiting and busiest hour.",
+        "annotations": {
+          "readOnlyHint": true,
+          "idempotentHint": true,
+          "openWorldHint": false
+        },
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "business_id": {
+              "type": "string",
+              "format": "uuid",
+              "description": "Business id from list_businesses."
+            }
+          },
+          "required": [
+            "business_id"
+          ],
+          "additionalProperties": false,
+          "$schema": "http://json-schema.org/draft-07/schema#"
+        },
+        "outputSchema": null
+      }
+    ]
+  }
+}

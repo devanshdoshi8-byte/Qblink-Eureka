@@ -1,0 +1,18 @@
+# Qblink
+
+> Customer Flow Intelligence Platform for walk-in businesses. Hardware-free, no app — reduce crowding, uncertainty, and reception interruptions with remote waiting, live customer flow, analytics, and AI recommendations.
+
+Qblink is a customer flow platform — not just digital tokens. It helps walk-in businesses like restaurants, clinics, salons, pharmacies, and service centers reduce uncertainty, cut crowding, minimize front-desk interruptions, and gain live operational visibility. Customers wait remotely and track their turn from any phone; businesses get live flow control, analytics, and AI recommendations from a simple dashboard. No app. No hardware.
+
+## Pages
+
+- [Home](/): Product overview, how it works, who it's for, and pricing.
+- [Get Started](/auth): Choose between a customer or business account.
+- [Affiliate Program](/affiliate): Earn recurring commissions by referring businesses to Qblink.
+- [Install App](/install): Install Qblink as a mobile app on iOS and Android.
+
+## Optional
+
+- [Customer Sign Up](/auth/customer): Create a customer account with your phone number.
+- [Business Sign Up](/auth/business): Register your business and start running queues.
+- [Sign In](/auth/signin): Sign in to an existing Qblink account.

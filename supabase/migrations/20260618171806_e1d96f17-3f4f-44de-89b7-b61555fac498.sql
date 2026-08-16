@@ -1,0 +1,43 @@
+CREATE OR REPLACE FUNCTION public.emit_queue_live_signal()
+RETURNS trigger
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path = public
+AS $$
+DECLARE
+  v_queue_id uuid;
+  v_event text;
+BEGIN
+  IF TG_TABLE_NAME = 'queues' THEN
+    v_queue_id := COALESCE(NEW.id, OLD.id);
+    v_event := 'queue_' || lower(TG_OP);
+  ELSE
+    v_queue_id := COALESCE(NEW.queue_id, OLD.queue_id);
+    v_event := 'visitor_' || lower(TG_OP);
+  END IF;
+
+  IF v_queue_id IS NOT NULL THEN
+    INSERT INTO public.queue_live_signals (queue_id, event_type)
+    VALUES (v_queue_id, v_event);
+  END IF;
+
+  RETURN COALESCE(NEW, OLD);
+END;
+$$;
+
+DROP TRIGGER IF EXISTS queue_live_signal_on_queues ON public.queues;
+CREATE TRIGGER queue_live_signal_on_queues
+AFTER INSERT OR UPDATE OR DELETE ON public.queues
+FOR EACH ROW EXECUTE FUNCTION public.emit_queue_live_signal();
+
+DROP TRIGGER IF EXISTS queue_live_signal_on_visitors ON public.queue_visitors;
+CREATE TRIGGER queue_live_signal_on_visitors
+AFTER INSERT OR UPDATE OR DELETE ON public.queue_visitors
+FOR EACH ROW EXECUTE FUNCTION public.emit_queue_live_signal();
+
+DO $$
+BEGIN
+  ALTER PUBLICATION supabase_realtime ADD TABLE public.queue_live_signals;
+EXCEPTION
+  WHEN duplicate_object THEN NULL;
+END $$;

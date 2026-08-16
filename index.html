@@ -1,0 +1,60 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="color-scheme" content="light" />
+    <meta name="supported-color-schemes" content="light" />
+    <title>Qblink — Customer Flow Intelligence Platform</title>
+    <meta name="description" content="Qblink is a hardware-free customer flow platform. Reduce crowding, uncertainty, and interruptions with remote waiting, live flow visibility, analytics, and AI recommendations — no app, no hardware.">
+    <meta name="author" content="Qblink" />
+
+    <meta name="google-site-verification" content="Ln1yK0WZe5zzt6i_xi7oM_tI82TWGbhl3CSJVRk4H88" />
+    <link rel="manifest" href="/manifest.json" />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <meta name="theme-color" content="#0099ff" />
+    <meta name="mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="default" />
+    <meta name="apple-mobile-web-app-title" content="Qblink" />
+    <link rel="icon" type="image/png" sizes="64x64" href="/favicon.png" />
+    <link rel="icon" type="image/png" sizes="192x192" href="/icon-192.png" />
+    <link rel="icon" type="image/png" sizes="512x512" href="/icon-512.png" />
+    <link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png" />
+
+    
+    <script>
+      // Pre-hydration theme setter — prevents flash of wrong theme on load.
+      (function () {
+        try {
+          var stored = localStorage.getItem("qblink-theme");
+          if (stored === "dark") {
+            document.documentElement.classList.add("dark");
+          } else if (stored === "light") {
+            document.documentElement.classList.remove("dark");
+          }
+          // No stored preference => leave neutral so the app can show the
+          // first-time appearance picker before committing to a theme.
+        } catch (e) {}
+      })();
+    </script>
+
+    
+    <meta property="og:type" content="website" />
+    <meta property="og:title" content="Qblink — Customer Flow Intelligence Platform">
+  <meta name="twitter:title" content="Qblink — Customer Flow Intelligence Platform">
+  <meta property="og:description" content="Hardware-free customer flow platform for walk-in businesses. Remote waiting, live flow visibility, analytics, and AI recommendations — no app required.">
+  <meta name="twitter:description" content="Hardware-free customer flow platform for walk-in businesses. Remote waiting, live flow visibility, analytics, and AI recommendations — no app required.">
+  <meta property="og:image" content="https://qblink-real.lovable.app/og-image.png">
+  <meta property="og:image:width" content="1216">
+  <meta property="og:image:height" content="640">
+  <meta name="twitter:image" content="https://qblink-real.lovable.app/og-image.png">
+  <meta name="twitter:card" content="summary_large_image">
+</head>
+
+  <body>
+    <div id="root"></div>
+    <script type="module" src="/src/main.tsx"></script>
+  </body>
+</html>
