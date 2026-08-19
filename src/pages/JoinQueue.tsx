@@ -1017,8 +1017,21 @@ const JoinQueue = () => {
                   />
                 )}
                 <button onClick={handleJoin} disabled={joining}
-                  className="w-full gradient-bg text-primary-foreground py-3.5 rounded-xl text-sm font-semibold hover:opacity-90 transition-opacity disabled:opacity-50">
-                  {joining ? "Joining..." : "Join Queue"}
+                  className={`w-full py-3.5 rounded-xl text-sm font-semibold transition-all disabled:opacity-50 shadow-md ${
+                    prefilled && visitorName && phone
+                      ? "bg-gradient-to-r from-primary via-primary/90 to-amber-500 text-primary-foreground hover:shadow-lg active:scale-[0.99]"
+                      : "gradient-bg text-primary-foreground hover:opacity-90 active:scale-[0.99]"
+                  }`}>
+                  {joining ? (
+                    "Joining..."
+                  ) : prefilled && visitorName && phone ? (
+                    <span className="inline-flex items-center justify-center gap-1.5">
+                      <Zap className="w-4 h-4 fill-amber-300 text-amber-300 animate-pulse" />
+                      <span>One-Tap Quick Join</span>
+                    </span>
+                  ) : (
+                    "Join Queue"
+                  )}
                 </button>
               </>
             )}

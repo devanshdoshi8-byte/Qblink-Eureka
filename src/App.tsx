@@ -9,6 +9,7 @@ import { ThemeProvider } from "@/hooks/useTheme";
 import { ThemeInitModal } from "@/components/ThemeInitModal";
 import BackButton from "./components/BackButton";
 import InstallAppPrompt from "./components/InstallAppPrompt";
+import StageDemoSwitcher from "./components/pitch/StageDemoSwitcher";
 import Index from "./pages/Index.tsx";
 import JoinQueue from "./pages/JoinQueue.tsx";
 import AdminRoute from "./components/admin/AdminRoute.tsx";
@@ -107,6 +108,7 @@ const App = () => (
           <Sonner />
           <BrowserRouter future={{ v7_startTransition: true, v7_relativeSplatPath: true }}>
             <GlobalBackButton />
+            <StageDemoSwitcher />
             <InstallAppPrompt />
           <Suspense fallback={<RouteFallback />}>
           <Routes>

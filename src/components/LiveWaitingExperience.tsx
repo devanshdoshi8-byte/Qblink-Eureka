@@ -1,6 +1,24 @@
 import { motion, AnimatePresence } from "framer-motion";
 import { useEffect, useRef, useState } from "react";
-import { Activity, Clock, MapPin, RefreshCw, Sparkles, Users, Wifi, BellRing, Timer, Hourglass, ShieldCheck, Zap } from "lucide-react";
+import {
+  Activity,
+  Clock,
+  MapPin,
+  RefreshCw,
+  Sparkles,
+  Users,
+  Wifi,
+  BellRing,
+  Timer,
+  Hourglass,
+  ShieldCheck,
+  Zap,
+  Bookmark,
+  Share2,
+  CheckCircle2,
+  AlertCircle,
+  Footprints,
+} from "lucide-react";
 import { AnimatedNumber } from "@/components/AnimatedNumber";
 import { WebPushProvider, NotificationPermissionState } from "@/lib/notifications/providers/webPushProvider";
 import { formatGraceCountdown, getRemainingGraceSeconds, GraceStatus } from "@/lib/arrivalGraceEngine";
@@ -29,11 +47,12 @@ interface Props {
 }
 
 /**
- * Futuristic live waiting experience.
- * Enhanced with:
- * - Feature A: "I'm 2 mins away" customer arrival grace action & countdown
- * - Feature B: Proactive notification preferences and push activation
- * - Feature E: Dynamic rolling velocity indicator & predictive bounds
+ * Enhanced Tactile Boarding Pass & Live Waiting Experience.
+ * Features:
+ * - 3-Step Dynamic Journey Stepper (Joined -> Get Ready -> Head to Counter)
+ * - Tactile Ticket Pass styling with cut-out notches and watermark
+ * - One-tap arrival grace extension ("I'm 2 mins away")
+ * - Pass bookmark / Native Web Share helper
  */
 const LiveWaitingExperience = ({
   ahead,
@@ -51,7 +70,6 @@ const LiveWaitingExperience = ({
   velocityConfidence,
   effectiveVelocity,
 }: Props) => {
-  // Refresh button state — provides visible + assistive feedback while updating.
   const [isRefreshing, setIsRefreshing] = useState(false);
   const refreshBtnRef = useRef<HTMLButtonElement | null>(null);
   const [pushState, setPushState] = useState<NotificationPermissionState>(() => WebPushProvider.getPermission());
@@ -77,6 +95,25 @@ const LiveWaitingExperience = ({
     }
   };
 
+  const handleSharePass = async () => {
+    if (navigator.share) {
+      try {
+        await navigator.share({
+          title: `My Qblink Queue Pass #${myToken}`,
+          text: `Tracking my live queue position (#${myToken}) on Qblink. Estimated wait: ${waitMinutes} mins.`,
+          url: window.location.href,
+        });
+        hapticSuccess();
+      } catch {}
+    } else {
+      navigator.clipboard.writeText(window.location.href);
+      hapticSuccess();
+      toast.success("Pass link copied!", {
+        description: "Bookmark or save this link to reopen your pass anytime.",
+      });
+    }
+  };
+
   const handleRefresh = async () => {
     if (isRefreshing) return;
     setIsRefreshing(true);
@@ -87,7 +124,7 @@ const LiveWaitingExperience = ({
     }
   };
 
-  // Global keyboard shortcut: press "R" to refresh the queue
+  // Keyboard shortcut: R to refresh
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
       if (e.defaultPrevented || e.altKey || e.ctrlKey || e.metaKey) return;
@@ -142,17 +179,22 @@ const LiveWaitingExperience = ({
         }
       } catch {}
       if ("vibrate" in navigator) {
-        try { (navigator as any).vibrate?.(20); } catch {}
+        try {
+          (navigator as any).vibrate?.(20);
+        } catch {}
       }
     }
     prevAheadRef.current = ahead;
   }, [ahead]);
 
+  // Determine current Stepper stage: 1 = Joined, 2 = Getting Closer (ahead <= 2), 3 = Called / Now Serving (ahead === 0)
+  const currentStep = ahead === 0 ? 3 : ahead <= 2 ? 2 : 1;
+
   // Rotating microcopy
   const lines = [
     "You are waiting with live visibility.",
-    "Adaptive service velocity adapts to counter speed in real-time.",
-    "Qblink is helping you wait comfortably anywhere.",
+    "Adaptive service velocity updates automatically in real-time.",
+    "Qblink gives you freedom to wait comfortably anywhere.",
     "No crowded rooms. 100% time certainty.",
   ];
   const [lineIdx, setLineIdx] = useState(0);
@@ -166,7 +208,7 @@ const LiveWaitingExperience = ({
   return (
     <section className="relative w-full" aria-label="Live queue status">
       {/* Ambient motion background */}
-      <div className="pointer-events-none absolute inset-0 -z-10 overflow-hidden rounded-2xl">
+      <div className="pointer-events-none absolute inset-0 -z-10 overflow-hidden rounded-3xl">
         <motion.div
           aria-hidden
           className="absolute -top-16 -left-10 h-56 w-56 rounded-full blur-3xl"
@@ -183,32 +225,107 @@ const LiveWaitingExperience = ({
         />
       </div>
 
-      {/* Glassy hero card with progress ring */}
+      {/* Tactile Boarding Pass Container with Notch Cutouts */}
       <motion.div
-        initial={{ opacity: 0, y: 12, rotateX: -6 }}
-        animate={{ opacity: 1, y: 0, rotateX: 0 }}
-        transition={{ duration: 0.55, ease: "easeOut" }}
-        style={{ transformPerspective: 900 }}
-        className="relative rounded-2xl border border-primary/15 bg-card/70 backdrop-blur-xl p-5 shadow-[0_20px_60px_-25px_hsl(var(--primary)/0.45)] dark:bg-[hsl(215_50%_15%)] dark:border-primary/40"
+        initial={{ opacity: 0, y: 14, scale: 0.98 }}
+        animate={{ opacity: 1, y: 0, scale: 1 }}
+        transition={{ duration: 0.5, ease: "easeOut" }}
+        className="relative rounded-3xl border-2 border-primary/20 bg-card/85 backdrop-blur-2xl p-5 sm:p-6 shadow-[0_24px_70px_-20px_hsl(var(--primary)/0.35)] dark:bg-[hsl(215_50%_14%)] dark:border-primary/40 overflow-hidden"
       >
-        <div className="flex items-center justify-between mb-4">
-          <div className="flex items-center gap-1.5 text-[10px] font-semibold uppercase tracking-[0.18em] text-primary">
-            <motion.span
-              className="relative inline-flex h-2 w-2 rounded-full bg-primary"
-              animate={{ scale: [1, 1.6, 1], opacity: [1, 0.4, 1] }}
-              transition={{ duration: 1.6, repeat: Infinity }}
-            />
-            Live Flow
+        {/* Ticket Watermark */}
+        <div className="absolute right-3 top-2 text-[6.5rem] font-black tracking-tighter text-primary/5 select-none pointer-events-none -rotate-12">
+          #{myToken}
+        </div>
+
+        {/* Top Pass Status Strip */}
+        <div className="flex items-center justify-between mb-5">
+          <div className="flex items-center gap-2">
+            <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-primary/10 text-primary text-[10px] font-mono font-bold tracking-wider uppercase border border-primary/20">
+              <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
+              Live Queue Pass
+            </span>
+            <span className="text-[11px] text-muted-foreground font-medium hidden sm:inline">
+              Verified Token
+            </span>
           </div>
-          <div className="flex items-center gap-1 text-[10px] text-muted-foreground dark:text-foreground/70">
-            <Wifi className="w-3 h-3" /> Realtime
+
+          <div className="flex items-center gap-1.5">
+            <button
+              type="button"
+              onClick={handleSharePass}
+              className="p-1.5 rounded-lg text-muted-foreground hover:text-foreground hover:bg-muted/80 transition-colors"
+              title="Save or Share Pass"
+            >
+              <Share2 className="w-4 h-4" />
+            </button>
+            <div className="flex items-center gap-1 text-[10px] text-muted-foreground font-mono">
+              <Wifi className="w-3 h-3 text-emerald-500" />
+              <span>Synced</span>
+            </div>
           </div>
         </div>
 
-        <div className="flex items-center gap-5">
-          {/* SVG progress ring */}
+        {/* 3-Step Journey Stepper */}
+        <div className="mb-6 bg-muted/40 dark:bg-muted/20 rounded-2xl p-3 border border-border/60">
+          <div className="flex items-center justify-between relative">
+            {/* Connecting Track */}
+            <div className="absolute left-6 right-6 top-3.5 h-0.5 bg-border -z-0" />
+            <div
+              className="absolute left-6 top-3.5 h-0.5 bg-primary transition-all duration-700 -z-0"
+              style={{
+                width: currentStep === 3 ? "calc(100% - 3rem)" : currentStep === 2 ? "calc(50% - 1.5rem)" : "0%",
+              }}
+            />
+
+            {/* Step 1 */}
+            <div className="flex flex-col items-center gap-1 relative z-10">
+              <div
+                className={`w-7 h-7 rounded-full flex items-center justify-center text-xs font-bold transition-all shadow-sm ${
+                  currentStep >= 1
+                    ? "bg-primary text-primary-foreground ring-4 ring-primary/20"
+                    : "bg-muted text-muted-foreground"
+                }`}
+              >
+                ✓
+              </div>
+              <span className="text-[10px] font-bold text-foreground">Joined Line</span>
+            </div>
+
+            {/* Step 2 */}
+            <div className="flex flex-col items-center gap-1 relative z-10">
+              <div
+                className={`w-7 h-7 rounded-full flex items-center justify-center text-xs font-bold transition-all shadow-sm ${
+                  currentStep >= 2
+                    ? "bg-amber-500 text-white ring-4 ring-amber-500/20 animate-pulse"
+                    : "bg-muted text-muted-foreground"
+                }`}
+              >
+                2
+              </div>
+              <span className="text-[10px] font-bold text-foreground">Get Ready</span>
+            </div>
+
+            {/* Step 3 */}
+            <div className="flex flex-col items-center gap-1 relative z-10">
+              <div
+                className={`w-7 h-7 rounded-full flex items-center justify-center text-xs font-bold transition-all shadow-sm ${
+                  currentStep >= 3
+                    ? "bg-emerald-600 text-white ring-4 ring-emerald-500/30 animate-bounce"
+                    : "bg-muted text-muted-foreground"
+                }`}
+              >
+                3
+              </div>
+              <span className="text-[10px] font-bold text-foreground">Now Serving</span>
+            </div>
+          </div>
+        </div>
+
+        {/* Hero Token & Progress Ring */}
+        <div className="flex items-center gap-5 sm:gap-6 my-2">
+          {/* SVG Progress Ring with Token */}
           <div
-            className="relative h-28 w-28 shrink-0"
+            className="relative h-28 w-28 sm:h-32 sm:w-32 shrink-0"
             role="progressbar"
             aria-label={`Queue progress for token ${myToken ?? ""}`}
             aria-valuemin={0}
@@ -224,59 +341,71 @@ const LiveWaitingExperience = ({
               </defs>
               <circle cx="60" cy="60" r="50" stroke="hsl(var(--muted))" strokeWidth="8" fill="none" opacity="0.7" />
               <motion.circle
-                cx="60" cy="60" r="50" fill="none"
-                stroke="url(#qb-ring)" strokeWidth="8" strokeLinecap="round"
+                cx="60"
+                cy="60"
+                r="50"
+                fill="none"
+                stroke="url(#qb-ring)"
+                strokeWidth="8"
+                strokeLinecap="round"
                 strokeDasharray={2 * Math.PI * 50}
                 initial={{ strokeDashoffset: 2 * Math.PI * 50 }}
                 animate={{ strokeDashoffset: 2 * Math.PI * 50 * (1 - progressPct / 100) }}
                 transition={{ duration: 1.2, ease: "easeOut" }}
               />
             </svg>
-            <div className="absolute inset-0 flex flex-col items-center justify-center">
-              <span className="text-[10px] uppercase tracking-wider text-muted-foreground dark:text-foreground/70">Token</span>
-              <span className="text-2xl font-extrabold text-foreground leading-none">#{myToken}</span>
-              <span className="text-[10px] text-primary font-semibold mt-0.5">
+            <div className="absolute inset-0 flex flex-col items-center justify-center text-center">
+              <span className="text-[10px] uppercase font-mono tracking-wider text-muted-foreground dark:text-foreground/70">
+                Your Token
+              </span>
+              <span className="text-3xl sm:text-4xl font-black text-foreground leading-none tracking-tight">
+                #{myToken}
+              </span>
+              <span className="text-[10px] text-primary font-bold mt-1">
                 <AnimatedNumber value={progressPct} suffix="% closer" ariaLive={false} />
               </span>
             </div>
           </div>
 
           <div className="min-w-0 flex-1">
-            <p className="text-[10px] uppercase tracking-[0.18em] text-muted-foreground dark:text-foreground/70">Now serving</p>
-            <p className="text-3xl font-extrabold text-foreground leading-tight">
+            <p className="text-[10px] uppercase font-mono tracking-wider text-muted-foreground dark:text-foreground/70">
+              Now Serving At Counter
+            </p>
+            <p className="text-3xl sm:text-4xl font-extrabold text-foreground leading-tight">
               {typeof nowServing === "number" ? (
                 <AnimatedNumber value={nowServing} prefix="#" invertHighlight ariaLive={false} />
               ) : (
                 <span>—</span>
               )}
             </p>
-            <div className="mt-1 inline-flex items-center gap-1.5 rounded-full bg-primary/10 px-2 py-0.5 text-[11px] font-semibold text-primary">
-              <Activity className="w-3 h-3" /> {liveStatus}
+            <div className="mt-2 inline-flex items-center gap-1.5 rounded-full bg-primary/10 px-2.5 py-0.5 text-xs font-semibold text-primary">
+              <Activity className="w-3.5 h-3.5" />
+              <span>{liveStatus}</span>
             </div>
           </div>
         </div>
 
-        {/* Feature A: "I'm 2 Minutes Away" Arrival Grace Card */}
-        {(ahead === 0 || liveStatus.includes("next")) && (
+        {/* Arrival Grace Window / Action Card */}
+        {(ahead === 0 || liveStatus.includes("next") || currentStep >= 2) && (
           <motion.div
             initial={{ opacity: 0, scale: 0.96 }}
             animate={{ opacity: 1, scale: 1 }}
-            className="mt-4 p-4 rounded-2xl bg-gradient-to-br from-primary/15 via-primary/5 to-transparent border-2 border-primary/30"
+            className="mt-5 p-4 rounded-2xl bg-gradient-to-br from-primary/15 via-primary/5 to-transparent border-2 border-primary/30"
           >
             {graceStatus === "active" || graceStatus === "requested" ? (
               <div className="flex items-center justify-between gap-3">
                 <div className="flex items-center gap-2.5">
-                  <div className="w-9 h-9 rounded-xl bg-amber-500/10 text-amber-500 flex items-center justify-center animate-pulse">
+                  <div className="w-10 h-10 rounded-xl bg-amber-500/10 text-amber-500 flex items-center justify-center animate-pulse shrink-0">
                     <Hourglass className="w-5 h-5" />
                   </div>
                   <div>
                     <h4 className="text-xs font-bold text-foreground">Arrival Grace Window Active</h4>
                     <p className="text-[11px] text-muted-foreground">
-                      Staff notified you're approaching • Head to the counter
+                      Staff knows you're walking over • Please head to the counter
                     </p>
                   </div>
                 </div>
-                <div className="text-right">
+                <div className="text-right shrink-0">
                   <span className="font-mono text-base font-black text-amber-500 block">
                     {formatGraceCountdown(graceRemaining)}
                   </span>
@@ -287,29 +416,31 @@ const LiveWaitingExperience = ({
               <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
                 <div>
                   <h4 className="text-xs font-bold text-foreground flex items-center gap-1.5">
-                    <span>You're next in line!</span>
+                    <Footprints className="w-4 h-4 text-primary" />
+                    <span>{ahead === 0 ? "You're called right now!" : "Your turn is approaching!"}</span>
                   </h4>
                   <p className="text-[11px] text-muted-foreground mt-0.5">
-                    Walking from nearby or parking? Request a short 2-minute arrival grace.
+                    Walking from nearby? Tap to give staff a 2-minute arrival heads-up.
                   </p>
                 </div>
                 <button
                   type="button"
                   onClick={onRequestGrace}
-                  className="px-4 py-2 rounded-xl bg-primary text-primary-foreground text-xs font-bold hover:opacity-90 transition-all shadow-sm shrink-0"
+                  className="px-4 py-2.5 rounded-xl bg-primary text-primary-foreground text-xs font-bold hover:opacity-90 transition-all shadow-md shrink-0 flex items-center justify-center gap-1.5 active:scale-95"
                 >
-                  I'm 2 mins away
+                  <Footprints className="w-3.5 h-3.5" />
+                  <span>I'm 2 mins away</span>
                 </button>
               </div>
             )}
           </motion.div>
         )}
 
-        {/* Queue flow line */}
+        {/* Dynamic Live Flow Track */}
         <div className="mt-5" aria-hidden="true">
-          <div className="flex items-center justify-between text-[10px] uppercase tracking-wider text-muted-foreground dark:text-foreground/70 mb-2">
+          <div className="flex items-center justify-between text-[10px] uppercase font-mono tracking-wider text-muted-foreground dark:text-foreground/70 mb-2">
             <span>Counter</span>
-            <span>You</span>
+            <span>Your Position</span>
           </div>
           <div className="relative h-10 rounded-xl bg-gradient-to-r from-primary/15 via-primary/8 to-transparent overflow-hidden border border-primary/15 dark:border-primary/30">
             <motion.div
@@ -332,91 +463,93 @@ const LiveWaitingExperience = ({
                   />
                 ))}
                 {ahead > aheadDots && (
-                  <span className="text-[10px] text-muted-foreground ml-1">+{ahead - aheadDots}</span>
+                  <span className="text-[10px] text-muted-foreground ml-1 font-mono">+{ahead - aheadDots}</span>
                 )}
               </div>
-              <div className="h-6 px-2 rounded-md bg-foreground/90 text-background flex items-center text-[10px] font-bold shadow-md">
+              <div className="h-6 px-2 rounded-md bg-foreground/90 text-background flex items-center text-[10px] font-bold shadow-md font-mono">
                 #{myToken}
               </div>
             </div>
           </div>
         </div>
 
-        {/* Stat tiles */}
+        {/* Stat Tiles */}
         <dl className="mt-4 grid grid-cols-2 gap-3">
           <motion.div
             whileHover={{ y: -2 }}
-            className="rounded-xl border border-border bg-background/70 backdrop-blur p-3 dark:bg-[hsl(215_45%_18%)] dark:border-primary/25"
+            className="rounded-2xl border border-border bg-background/70 backdrop-blur p-3.5 dark:bg-[hsl(215_45%_18%)] dark:border-primary/25 shadow-sm"
           >
-            <dt className="flex items-center gap-1.5 text-[10px] uppercase tracking-wider text-muted-foreground dark:text-foreground/70 mb-1">
-              <Users className="w-3 h-3" /> Ahead of you
+            <dt className="flex items-center gap-1.5 text-[10px] uppercase font-mono tracking-wider text-muted-foreground dark:text-foreground/70 mb-1">
+              <Users className="w-3.5 h-3.5 text-primary" /> Ahead of you
             </dt>
-            <dd className="text-lg font-bold text-foreground">
+            <dd className="text-xl font-black text-foreground">
               <AnimatedNumber value={ahead} ariaLive={false} />
             </dd>
           </motion.div>
           <motion.div
             whileHover={{ y: -2 }}
-            className="rounded-xl border border-border bg-background/70 backdrop-blur p-3 dark:bg-[hsl(215_45%_18%)] dark:border-primary/25"
+            className="rounded-2xl border border-border bg-background/70 backdrop-blur p-3.5 dark:bg-[hsl(215_45%_18%)] dark:border-primary/25 shadow-sm"
           >
-            <dt className="flex items-center justify-between text-[10px] uppercase tracking-wider text-muted-foreground dark:text-foreground/70 mb-1">
-              <span className="flex items-center gap-1.5"><Clock className="w-3 h-3" /> Estimated wait</span>
+            <dt className="flex items-center justify-between text-[10px] uppercase font-mono tracking-wider text-muted-foreground dark:text-foreground/70 mb-1">
+              <span className="flex items-center gap-1.5">
+                <Clock className="w-3.5 h-3.5 text-primary" /> Est. wait
+              </span>
               {velocityConfidence && velocityConfidence >= 70 && (
                 <span className="text-[9px] text-emerald-500 font-semibold flex items-center gap-0.5">
-                  <Zap className="w-2.5 h-2.5" /> Live Velocity
+                  <Zap className="w-2.5 h-2.5" /> Live
                 </span>
               )}
             </dt>
-            <dd className="text-lg font-bold text-foreground">
-              <AnimatedNumber value={waitMinutes} suffix="m" ariaLive={false} />
+            <dd className="text-xl font-black text-foreground">
+              <AnimatedNumber value={waitMinutes} suffix=" min" ariaLive={false} />
             </dd>
           </motion.div>
         </dl>
 
-        {/* Feature B: Proactive Push Notification Banner */}
+        {/* Push Notification Banner */}
         {pushState !== "granted" && (
           <motion.div
             layout
-            className="mt-3 rounded-xl border border-border bg-muted/40 p-3 flex items-center justify-between gap-3"
+            className="mt-3.5 rounded-2xl border border-border bg-muted/40 p-3.5 flex items-center justify-between gap-3"
           >
             <div className="flex items-center gap-2.5">
               <BellRing className="w-4 h-4 text-primary shrink-0" />
               <div>
-                <p className="text-xs font-semibold text-foreground">Get Turn Alerts</p>
-                <p className="text-[10px] text-muted-foreground">Receive sound & push alerts when you're 5th, 2nd, and Next.</p>
+                <p className="text-xs font-semibold text-foreground">Enable Turn Alerts</p>
+                <p className="text-[10px] text-muted-foreground">Receive sound alerts when you're 2nd and Next.</p>
               </div>
             </div>
             <button
               type="button"
               onClick={handleEnableNotifications}
-              className="px-3 py-1.5 rounded-lg bg-primary/10 text-primary hover:bg-primary/20 text-xs font-bold transition-colors shrink-0"
+              className="px-3 py-1.5 rounded-xl bg-primary/10 text-primary hover:bg-primary/20 text-xs font-bold transition-colors shrink-0"
             >
               Enable
             </button>
           </motion.div>
         )}
 
-        {/* Saved-time counter */}
+        {/* Saved-Time Counter */}
         {joinedAt && (
           <motion.div
             layout
-            className="mt-3 rounded-xl border border-primary/15 bg-gradient-to-r from-primary/10 via-primary/5 to-transparent p-3 flex items-center gap-3 dark:border-primary/35"
+            className="mt-3.5 rounded-2xl border border-primary/15 bg-gradient-to-r from-primary/10 via-primary/5 to-transparent p-3.5 flex items-center gap-3 dark:border-primary/35"
           >
-            <div className="h-9 w-9 rounded-lg bg-primary/15 flex items-center justify-center">
+            <div className="h-9 w-9 rounded-xl bg-primary/15 flex items-center justify-center shrink-0">
               <Timer className="w-4 h-4 text-primary" />
             </div>
             <div className="min-w-0 flex-1">
-              <p className="text-[10px] uppercase tracking-wider text-muted-foreground dark:text-foreground/70">
+              <p className="text-[10px] uppercase font-mono tracking-wider text-muted-foreground dark:text-foreground/70">
                 Physical waiting avoided
               </p>
-              <p className="text-sm font-bold text-foreground leading-tight">
-                Qblink saved you <span className="text-primary"><AnimatedNumber value={minutesSaved} suffix=" min" /></span> of standing in line.
+              <p className="text-xs sm:text-sm font-bold text-foreground leading-tight">
+                Qblink saved you <span className="text-primary font-black"><AnimatedNumber value={minutesSaved} suffix=" min" /></span> of standing in line.
               </p>
             </div>
           </motion.div>
         )}
 
-        {/* Rotating microcopy */}
+        {/* Rotating Microcopy */}
         <div className="mt-4 h-5 overflow-hidden text-center">
           <AnimatePresence mode="wait">
             <motion.p
@@ -427,22 +560,25 @@ const LiveWaitingExperience = ({
               transition={{ duration: 0.5 }}
               className="text-xs font-medium text-primary/90"
             >
-              <Sparkles className="inline w-3 h-3 mr-1 -mt-0.5" />
+              <Sparkles className="inline w-3.5 h-3.5 mr-1 -mt-0.5" />
               {lines[lineIdx]}
             </motion.p>
           </AnimatePresence>
         </div>
 
+        {/* Bottom Refresh Button */}
         <button
           ref={refreshBtnRef}
           type="button"
           onClick={handleRefresh}
           disabled={isRefreshing}
-          className="mt-3 w-full min-h-11 text-xs text-muted-foreground hover:text-foreground flex items-center justify-center gap-1.5 py-2 rounded-lg transition-colors"
+          className="mt-3.5 w-full min-h-11 text-xs text-muted-foreground hover:text-foreground flex items-center justify-center gap-1.5 py-2.5 rounded-xl border border-border/60 hover:bg-muted/50 transition-colors"
         >
-          <RefreshCw className={`w-3 h-3 ${isRefreshing ? "animate-spin" : ""}`} />
-          <span>{isRefreshing ? "Refreshing…" : "Refresh now"}</span>
-          <kbd className="ml-1 hidden sm:inline-flex items-center rounded border border-border px-1 text-[10px] font-mono text-muted-foreground">R</kbd>
+          <RefreshCw className={`w-3.5 h-3.5 ${isRefreshing ? "animate-spin text-primary" : ""}`} />
+          <span>{isRefreshing ? "Updating live data…" : "Refresh live status"}</span>
+          <kbd className="ml-1 hidden sm:inline-flex items-center rounded border border-border px-1.5 text-[10px] font-mono text-muted-foreground">
+            R
+          </kbd>
         </button>
       </motion.div>
     </section>
