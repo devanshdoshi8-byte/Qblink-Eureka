@@ -16,7 +16,6 @@ import {
   Pause,
   Play,
   RefreshCw,
-  Sunrise,
   Info,
   Printer,
   Layers,
@@ -41,6 +40,7 @@ import HealthScoreCard from "@/components/health/HealthScoreCard";
 import QueueHealthAlerts from "@/components/QueueHealthAlerts";
 import QueueIntegrityPanel from "@/components/business/QueueIntegrityPanel";
 import { useQueueSync } from "@/hooks/useQueueSync";
+import { useAutoDaySync } from "@/hooks/useAutoDaySync";
 import RestaurantTableConfig, { TableSize, COMMON_PARTY_SIZES, PartySizeMode } from "@/components/business/RestaurantTableConfig";
 import EmptyState from "@/components/EmptyState";
 import InfoHint from "@/components/InfoHint";
@@ -80,12 +80,20 @@ interface Visitor {
 const Dashboard = () => {
   return (
     <BusinessLayout>
-      {(business) => <QueueManager businessId={business.id} businessName={business.name} />}
+      {(business) => <QueueManager businessId={business.id} businessName={business.name} business={business} />}
     </BusinessLayout>
   );
 };
 
-const QueueManager = ({ businessId, businessName }: { businessId: string; businessName: string }) => {
+const QueueManager = ({
+  businessId,
+  businessName,
+  business,
+}: {
+  businessId: string;
+  businessName: string;
+  business?: any;
+}) => {
   const [selectedQueueId, setSelectedQueueId] = useState<string | null>(null);
   const [showCreate, setShowCreate] = useState(false);
   const [showQR, setShowQR] = useState(false);
@@ -125,9 +133,6 @@ const QueueManager = ({ businessId, businessName }: { businessId: string; busine
   const [walkinName, setWalkinName] = useState("");
   const [walkinPhone, setWalkinPhone] = useState("");
   const [walkinParty, setWalkinParty] = useState<number>(2);
-  const [showReset, setShowReset] = useState(false);
-  const [showResetInfo, setShowResetInfo] = useState(false);
-  const [resetting, setResetting] = useState(false);
   const [showPrintKit, setShowPrintKit] = useState(false);
   const [showDailySummary, setShowDailySummary] = useState(false);
   const [showServiceConfig, setShowServiceConfig] = useState(false);
@@ -151,6 +156,14 @@ const QueueManager = ({ businessId, businessName }: { businessId: string; busine
   const visitors: Visitor[] = getDetailVisitors(selectedQueue?.id);
   const syncedStats = getQueueStats(selectedQueue?.id);
   const showDebug = typeof window !== "undefined" && new URLSearchParams(window.location.search).get("qdebug") === "1";
+
+  // Automatic timezone-aware day synchronization & midnight rollover
+  const { timeZone, isSyncing: daySyncing } = useAutoDaySync({
+    business,
+    selectedQueue,
+    visitors,
+    onDayReset: refresh,
+  });
 
   const waiting = visitors.filter((v) => v.status === "waiting");
   const called = visitors.filter((v) => v.status === "called");
@@ -347,25 +360,6 @@ const QueueManager = ({ businessId, businessName }: { businessId: string; busine
     await supabase.from("queues").update({ status: "closed" }).eq("id", selectedQueue.id);
     toast.info("Queue stopped");
     refresh();
-  };
-
-  const startNewDay = async () => {
-    if (!selectedQueue || resetting) return;
-    setResetting(true);
-    try {
-      const { data, error } = await supabase.rpc("reset_queue_for_new_day", { p_queue_id: selectedQueue.id });
-      if (error) {
-        toast.error(error.message || "Could not start a new day");
-        return;
-      }
-      const s: any = Array.isArray(data) ? data[0] : data;
-      hapticSuccess();
-      toast.success(`New day started — ${s?.total_joined ?? 0} visitors archived`);
-      setShowReset(false);
-      await refresh();
-    } finally {
-      setResetting(false);
-    }
   };
 
   // Global Keyboard Shortcuts
@@ -803,34 +797,17 @@ const QueueManager = ({ businessId, businessName }: { businessId: string; busine
               <Layers className="w-4 h-4 text-amber-500" /> Services
             </button>
 
-            <div className="flex items-center gap-1">
-              <button
-                onClick={() => setShowReset(true)}
-                className="bg-warning-soft text-warning hover:bg-warning-soft px-4 py-2.5 rounded-xl text-sm font-semibold transition-colors flex items-center gap-2"
-              >
-                <Sunrise className="w-4 h-4" /> Start New Day
-              </button>
-              <button
-                type="button"
-                onClick={() => setShowResetInfo((v) => !v)}
-                onBlur={() => setTimeout(() => setShowResetInfo(false), 150)}
-                title="What does this do?"
-                aria-label="About Start New Day"
-                className="relative w-8 h-8 rounded-full bg-card border border-border text-muted-foreground hover:text-foreground hover:bg-muted flex items-center justify-center"
-              >
-                <Info className="w-4 h-4" />
-                {showResetInfo && (
-                  <div className="absolute z-30 top-10 right-0 w-72 text-left bg-card border border-border rounded-xl p-3 card-shadow text-xs text-muted-foreground leading-relaxed">
-                    <p className="font-semibold text-foreground mb-1">Start a fresh business day</p>
-                    <ul className="list-disc pl-4 space-y-1">
-                      <li>Today's queue is closed and saved to history.</li>
-                      <li>A new session begins with token #1.</li>
-                      <li>Anyone still waiting is marked as a no-show.</li>
-                      <li>All past data stays available in Analytics & History.</li>
-                    </ul>
-                  </div>
-                )}
-              </button>
+            <div
+              className="flex items-center gap-2 px-3.5 py-2 rounded-xl bg-card border border-border text-xs text-muted-foreground shadow-sm"
+              title={`Auto-synced with ${timeZone} — sessions roll over and tokens reset automatically at midnight`}
+            >
+              <Clock className={`w-4 h-4 text-primary ${daySyncing ? "animate-spin" : ""}`} />
+              <div className="flex flex-col text-left">
+                <span className="font-semibold text-foreground leading-none">Auto-Day Sync</span>
+                <span className="text-[11px] text-muted-foreground/80 leading-tight">
+                  {daySyncing ? "Syncing new day…" : timeZone.replace(/_/g, " ")}
+                </span>
+              </div>
             </div>
 
             <button
@@ -1138,41 +1115,6 @@ const QueueManager = ({ businessId, businessName }: { businessId: string; busine
         </Modal>
       )}
 
-      {/* Start New Day Modal */}
-      {showReset && selectedQueue && (
-        <Modal onClose={() => !resetting && setShowReset(false)} title="Start a New Day?">
-          <div className="flex items-start gap-3 -mt-1">
-            <div className="w-10 h-10 rounded-xl bg-warning-soft text-warning flex items-center justify-center shrink-0">
-              <Sunrise className="w-5 h-5" />
-            </div>
-            <div className="text-sm text-muted-foreground leading-relaxed">
-              You're about to close today's queue for <span className="font-semibold text-foreground">{selectedQueue.name}</span> and begin a fresh session.
-            </div>
-          </div>
-          <div className="bg-muted/50 rounded-xl p-3 text-xs text-muted-foreground space-y-1.5">
-            <p>✓ Today's data is safely archived for analytics & reports</p>
-            <p>✓ Tokens reset to #1 for the new day</p>
-            <p>✓ Customers still waiting will be marked as no-show</p>
-            <p>✓ History remains accessible from the History page</p>
-          </div>
-          <div className="flex gap-3">
-            <button
-              onClick={startNewDay}
-              disabled={resetting}
-              className="flex-1 gradient-bg text-primary-foreground py-3 rounded-xl text-sm font-semibold hover:opacity-90 transition-opacity disabled:opacity-60"
-            >
-              {resetting ? "Starting…" : "Yes, Start New Day"}
-            </button>
-            <button
-              onClick={() => setShowReset(false)}
-              disabled={resetting}
-              className="px-5 py-3 rounded-xl text-sm font-medium border border-border text-muted-foreground hover:bg-muted transition-colors"
-            >
-              Cancel
-            </button>
-          </div>
-        </Modal>
-      )}
 
       {/* Print QR Kit Modal */}
       {showPrintKit && selectedQueue && (
