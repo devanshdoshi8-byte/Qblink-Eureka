@@ -173,7 +173,11 @@ class NotificationService {
       waitMinutes,
     });
 
-    const enabledChannels = preferences?.enabledChannels || ["push"];
+    const defaultChannels: NotificationChannel[] = ["push"];
+    if (SMSAdapter.isConfigured() && (phone || preferences?.phone)) {
+      defaultChannels.push("sms");
+    }
+    const enabledChannels = preferences?.enabledChannels || defaultChannels;
     const channelsDispatched: NotificationChannel[] = [];
 
     // 1. Browser Web Push / Web Notification API
