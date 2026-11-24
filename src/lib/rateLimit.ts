@@ -130,6 +130,18 @@ class PersistentRateLimiter {
     const key = this.getStorageKey(action, identifier);
     this.writeTimestamps(key, []);
   }
+
+  /**
+   * Completely clears all recorded rate limit state (useful for test isolation).
+   */
+  clearAll(): void {
+    this.memoryFallback.clear();
+    try {
+      if (typeof window !== "undefined" && window.localStorage) {
+        localStorage.clear();
+      }
+    } catch {}
+  }
 }
 
 export const rateLimiter = new PersistentRateLimiter();

@@ -13,8 +13,9 @@ export interface ExternalDispatchPayload {
   businessName: string;
   queueName: string;
   tokenNumber: number;
-  messageType: "position_5" | "position_2" | "position_1" | "called" | "grace_active" | "grace_expiring";
+  messageType: "position_5" | "position_2" | "position_1" | "called" | "grace_active" | "grace_expiring" | "otp";
   bodyText: string;
+  otpCode?: string;
 }
 
 export interface ExternalDispatchResult {
@@ -107,11 +108,24 @@ export class SMSAdapter {
       return { success: false, channel: "sms", provider: "sms", mode: "disabled", error: "Missing phone number" };
     }
 
+    // Policy Guard: SMS transmission is strictly restricted to OTP verification to preserve SMS quota.
+    // General queue milestones (position_5, position_2, position_1, called, grace) are blocked from SMS.
+    if ((payload.messageType as string) !== "otp") {
+      return {
+        success: false,
+        channel: "sms",
+        provider: "fast2sms",
+        mode: "disabled",
+        error: "SMS is restricted strictly to OTP verification to preserve SMS balance. Queue milestones use push and in-app alerts.",
+      };
+    }
+
     if (isFast2SmsConfigured()) {
       try {
         const res = await sendFast2Sms({
           phone: payload.toPhone,
           message: payload.bodyText,
+          isOtp: true,
         });
 
         if (res.success) {

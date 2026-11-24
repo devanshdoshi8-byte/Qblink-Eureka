@@ -11,6 +11,8 @@ export interface Fast2SmsSendParams {
   route?: "q" | "otp" | "dlt";
   variablesValues?: string;
   senderId?: string;
+  isOtp?: boolean;
+  allowNonOtp?: boolean;
 }
 
 export interface Fast2SmsResponse {
@@ -143,6 +145,16 @@ export async function sendFast2Sms(params: Fast2SmsSendParams): Promise<Fast2Sms
     };
   }
 
+  // Quota protection policy: Fast2SMS is restricted strictly to OTP verification.
+  // Non-OTP broadcasts (e.g. general queue notifications) are disallowed.
+  const isOtpDispatch = params.isOtp === true || params.route === "otp";
+  if (!isOtpDispatch && !params.allowNonOtp) {
+    return {
+      success: false,
+      error: "Fast2SMS gateway is restricted strictly to OTP verification to preserve SMS balance.",
+    };
+  }
+
   const route = params.route || "q";
 
   let body: Record<string, any>;
@@ -210,5 +222,6 @@ export async function sendFast2SmsOtp(phone: string, otpCode: string): Promise<F
     phone,
     message: `Your Qblink security code is ${otpCode}. Valid for 10 minutes. Do not share this code with anyone.`,
     route: "q",
+    isOtp: true,
   });
 }

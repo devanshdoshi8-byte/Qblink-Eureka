@@ -81,4 +81,27 @@ describe("Proactive Notification Service", () => {
       expect.objectContaining({ eventType: "called" })
     );
   });
+
+  it("strictly excludes SMS channel for queue milestones to conserve SMS quota", async () => {
+    vi.spyOn(WebPushProvider, "showNotification").mockReturnValue(true);
+
+    const result = await notificationService.dispatch({
+      visitorId: "vis-phone-user",
+      tokenNumber: 22,
+      businessName: "Aroma Cafe",
+      queueName: "Express Line",
+      eventType: "position_1",
+      phone: "9876543210",
+      preferences: {
+        enabledChannels: ["push", "sms"],
+        phone: "9876543210",
+        allowSound: true,
+      },
+    });
+
+    expect(result.dispatched).toBe(true);
+    // Push is dispatched, but SMS is filtered out for queue milestones
+    expect(result.channelsDispatched).toContain("push");
+    expect(result.channelsDispatched).not.toContain("sms");
+  });
 });

@@ -55,7 +55,17 @@ describe("Fast2SMS Integration Suite", () => {
       expect(isFast2SmsConfigured()).toBe(true);
     });
 
-    it("dispatches Quick SMS with correct payload headers and body", async () => {
+    it("enforces OTP-only policy and blocks generic non-OTP messages", async () => {
+      const res = await sendFast2Sms({
+        phone: "+91 98765 43210",
+        message: "Your token #14 is now serving at Counter 1.",
+      });
+
+      expect(res.success).toBe(false);
+      expect(res.error).toContain("restricted strictly to OTP verification");
+    });
+
+    it("dispatches OTP messages with correct payload headers and body", async () => {
       const mockFetch = vi.fn().mockResolvedValue({
         ok: true,
         json: async () => ({
@@ -68,7 +78,8 @@ describe("Fast2SMS Integration Suite", () => {
 
       const res = await sendFast2Sms({
         phone: "+91 98765 43210",
-        message: "Your token #14 is now serving at Counter 1.",
+        message: "Your Qblink security code is 582910. Valid for 10 minutes.",
+        isOtp: true,
       });
 
       expect(res.success).toBe(true);
@@ -83,10 +94,10 @@ describe("Fast2SMS Integration Suite", () => {
       const body = JSON.parse(options.body);
       expect(body.route).toBe("q");
       expect(body.numbers).toBe("9876543210");
-      expect(body.message).toContain("token #14");
+      expect(body.message).toContain("582910");
     });
 
-    it("handles Fast2SMS API errors gracefully", async () => {
+    it("handles Fast2SMS API errors gracefully during OTP dispatch", async () => {
       globalThis.fetch = vi.fn().mockResolvedValue({
         ok: false,
         status: 400,
@@ -98,7 +109,8 @@ describe("Fast2SMS Integration Suite", () => {
 
       const res = await sendFast2Sms({
         phone: "9876543210",
-        message: "Test message",
+        message: "Your Qblink code is 123456",
+        isOtp: true,
       });
 
       expect(res.success).toBe(false);
@@ -141,16 +153,7 @@ describe("Fast2SMS Integration Suite", () => {
   });
 
   describe("SMSAdapter Integration", () => {
-    it("routes through Fast2SMS provider in production mode", async () => {
-      globalThis.fetch = vi.fn().mockResolvedValue({
-        ok: true,
-        json: async () => ({
-          return: true,
-          request_id: "req_adapter_test",
-          message: ["Message sent"],
-        }),
-      });
-
+    it("rejects non-OTP queue milestones from SMS to protect SMS credits", async () => {
       const result = await SMSAdapter.send({
         toPhone: "9876543210",
         businessName: "Aroma Cafe",
@@ -160,11 +163,36 @@ describe("Fast2SMS Integration Suite", () => {
         bodyText: "Aroma Cafe is now serving ticket #5 at Counter 1.",
       });
 
+      expect(result.success).toBe(false);
+      expect(result.channel).toBe("sms");
+      expect(result.mode).toBe("disabled");
+      expect(result.error).toContain("restricted strictly to OTP verification");
+    });
+
+    it("allows and dispatches OTP verification via Fast2SMS provider", async () => {
+      globalThis.fetch = vi.fn().mockResolvedValue({
+        ok: true,
+        json: async () => ({
+          return: true,
+          request_id: "req_adapter_otp_test",
+          message: ["OTP sent"],
+        }),
+      });
+
+      const result = await SMSAdapter.send({
+        toPhone: "9876543210",
+        businessName: "Qblink Security",
+        queueName: "Auth",
+        tokenNumber: 1,
+        messageType: "otp",
+        bodyText: "Your Qblink verification code is 492019.",
+      });
+
       expect(result.success).toBe(true);
       expect(result.channel).toBe("sms");
       expect(result.provider).toBe("fast2sms");
       expect(result.mode).toBe("production");
-      expect(result.messageId).toBe("req_adapter_test");
+      expect(result.messageId).toBe("req_adapter_otp_test");
     });
   });
 });
