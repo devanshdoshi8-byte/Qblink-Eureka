@@ -7,6 +7,7 @@ import logo from "@/assets/qblink-logo.png";
 import { supportsPickup } from "@/lib/categories";
 import PrefillNotice from "@/components/PrefillNotice";
 import { hapticSuccess } from "@/lib/haptics";
+import { cryptoSecureInt } from "@/lib/securitySuite";
 
 interface Business {
   id: string;
@@ -109,12 +110,12 @@ const PickupOrder = () => {
     if (!isUuid(businessId)) {
       // Demo mode — simulate without DB write.
       hapticSuccess();
-      toast.success(`Order placed — token P-${Math.floor(Math.random() * 900 + 100)} (demo)`);
+      toast.success(`Order placed — token P-${cryptoSecureInt(100, 999)} (demo)`);
       navigate("/customer-dashboard");
       return;
     }
     setSubmitting(true);
-    const token = `P-${Math.floor(Math.random() * 900 + 100)}`;
+    const token = `P-${cryptoSecureInt(100, 999)}`;
     const orderId = crypto.randomUUID();
     const { data: { user } } = await supabase.auth.getUser();
     const { error } = await supabase

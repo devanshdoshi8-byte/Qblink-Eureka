@@ -32,6 +32,7 @@ import {
 } from "lucide-react";
 import { publicUrl } from "@/lib/publicUrl";
 import { QRCodeSVG } from "qrcode.react";
+import { rateLimiter } from "@/lib/rateLimit";
 import BusinessLayout from "@/components/business/BusinessLayout";
 import AIInsights from "@/components/AIInsights";
 import BusinessBenchmark from "@/components/business/BusinessBenchmark";
@@ -273,6 +274,12 @@ const QueueManager = ({
 
   const callNext = async () => {
     if (!selectedQueue || callingNext) return;
+    const limitCheck = rateLimiter.check("queue:call-next", selectedQueue.id);
+    if (!limitCheck.allowed) {
+      toast.error(`Please wait ${limitCheck.remainingSec}s before calling again`);
+      return;
+    }
+    rateLimiter.record("queue:call-next", selectedQueue.id);
     setCallingNext(true);
     try {
       const { data, error } = await supabase.rpc("call_next", { p_queue_id: selectedQueue.id });

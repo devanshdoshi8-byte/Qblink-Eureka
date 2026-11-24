@@ -3,6 +3,8 @@ import { Sparkles, X, Send, Loader2 } from "lucide-react";
 import ReactMarkdown from "react-markdown";
 import { motion, AnimatePresence } from "framer-motion";
 import { supabase } from "@/integrations/supabase/client";
+import { rateLimiter } from "@/lib/rateLimit";
+import { toast } from "sonner";
 
 type Msg = { role: "user" | "assistant"; content: string };
 
@@ -322,6 +324,14 @@ export default function AIAssistant({ mode, businessId, suggestions, queueContex
 
   const send = async (text: string) => {
     if (!text.trim() || loading) return;
+
+    const rateCheck = rateLimiter.checkAndRecord("ai:query");
+    if (!rateCheck.allowed) {
+      toast.error(rateCheck.message);
+      setMessages((m) => [...m, { role: "assistant", content: `⚠️ ${rateCheck.message}` }]);
+      return;
+    }
+
     const userMsg: Msg = { role: "user", content: text };
     const next = [...messages, userMsg];
     setMessages(next);

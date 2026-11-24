@@ -39,6 +39,7 @@ import {
 } from "@/components/ui/alert-dialog";
 import { useAuth } from "@/hooks/useAuth";
 import { logEngagement } from "@/lib/receptionImpact";
+import { rateLimiter, getRateLimitMessage } from "@/lib/rateLimit";
 
 interface QueueInfo {
   id: string;
@@ -554,6 +555,16 @@ const JoinQueue = () => {
   const handleJoin = async () => {
     setJoinError(null);
     if (!queue) return;
+
+    const limitCheck = rateLimiter.check("queue:join", queue.id);
+    if (!limitCheck.allowed) {
+      const msg = getRateLimitMessage("queue:join", limitCheck.remainingSec);
+      setJoinError(msg);
+      toast.error(msg);
+      return;
+    }
+    rateLimiter.record("queue:join", queue.id);
+
     const clearRememberedQueue = () => {
       const bizId = (queue as any)?.business_id;
       if (!bizId) return;

@@ -11,6 +11,8 @@ import SEO from "@/components/SEO";
 import { COUNTRY_CODES, normalizePhone, phoneToEmail, isValidPhone } from "@/lib/phoneAuth";
 import { GoogleButton, AuthDivider } from "@/components/auth/GooglePickerModal";
 import { signInWithGoogle } from "@/lib/auth/authService";
+import { sanitizeRedirectUrl } from "@/lib/security";
+import { rateLimiter, getRateLimitMessage } from "@/lib/rateLimit";
 
 const SignIn = () => {
   const [mode, setMode] = useState<"phone" | "email">("phone");
@@ -28,7 +30,7 @@ const SignIn = () => {
   const { isAdmin, loading: adminLoading } = useIsAdmin();
 
   const nextUrl = searchParams.get("next");
-  const safeNext = nextUrl && nextUrl.startsWith("/") && !nextUrl.startsWith("//") ? nextUrl : null;
+  const safeNext = nextUrl ? sanitizeRedirectUrl(nextUrl, "") : null;
   const signupHref = safeNext ? `/auth/customer?next=${encodeURIComponent(safeNext)}` : "/auth";
 
   useEffect(() => {
@@ -82,6 +84,17 @@ const SignIn = () => {
       setLoading(false);
       return;
     }
+
+    const limitCheck = rateLimiter.check("auth:signin", loginEmail);
+    if (!limitCheck.allowed) {
+      const msg = getRateLimitMessage("auth:signin", limitCheck.remainingSec);
+      setErrorMsg(msg);
+      toast.error(msg);
+      setLoading(false);
+      return;
+    }
+    rateLimiter.record("auth:signin", loginEmail);
+
     const { error } = await supabase.auth.signInWithPassword({ email: loginEmail, password });
     if (error) {
       const raw = (error.message || "").toLowerCase();
@@ -103,6 +116,7 @@ const SignIn = () => {
       toast.error(msg);
       setLoading(false);
     } else {
+      rateLimiter.reset("auth:signin", loginEmail);
       toast.success("Welcome back!");
     }
   };

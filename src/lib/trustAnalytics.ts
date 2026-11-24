@@ -1,4 +1,5 @@
 import { supabase } from "@/integrations/supabase/client";
+import { cryptoSecureUUID } from "@/lib/securitySuite";
 
 const SESSION_KEY = "qb_trust_session_id";
 const VIEWED_AT_KEY = "qb_trust_modal_viewed_at";
@@ -7,7 +8,7 @@ function getSessionId(): string {
   try {
     let id = localStorage.getItem(SESSION_KEY);
     if (!id) {
-      id = (crypto.randomUUID?.() ?? `s_${Date.now()}_${Math.random().toString(36).slice(2)}`);
+      id = cryptoSecureUUID();
       localStorage.setItem(SESSION_KEY, id);
     }
     return id;

@@ -5,6 +5,8 @@
  * offline mutation buffering for the business dashboard.
  */
 
+import { cryptoSecureToken } from "@/lib/securitySuite";
+
 export interface QueuedOfflineAction {
   id: string;
   action: "call_next" | "serve" | "skip" | "no_show" | "pause" | "resume";
@@ -37,7 +39,7 @@ export class OfflineQueueSyncEngine {
   static queueAction(action: Omit<QueuedOfflineAction, "id" | "timestamp">): QueuedOfflineAction {
     const item: QueuedOfflineAction = {
       ...action,
-      id: `act_${Date.now()}_${Math.random().toString(36).slice(2, 6)}`,
+      id: `act_${Date.now()}_${cryptoSecureToken(4)}`,
       timestamp: Date.now(),
     };
     const current = this.getQueuedActions();

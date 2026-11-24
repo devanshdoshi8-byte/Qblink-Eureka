@@ -5,6 +5,7 @@ import "./index.css";
 import { initAnalytics } from "./lib/analytics";
 import { observeWebVitals } from "./lib/webVitals";
 import { registerServiceWorker } from "./lib/pwa/registerServiceWorker";
+import { enforceFrameProtection } from "./lib/security";
 import "@fontsource/space-grotesk/400.css";
 import "@fontsource/space-grotesk/500.css";
 import "@fontsource/space-grotesk/600.css";
@@ -13,6 +14,7 @@ import "@fontsource/dm-sans/400.css";
 import "@fontsource/dm-sans/500.css";
 import "@fontsource/dm-sans/600.css";
 
+enforceFrameProtection();
 initAnalytics();
 
 // Live CLS / LCP / INP collection. Exposed on window so browser-based audits

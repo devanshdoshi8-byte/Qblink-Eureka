@@ -5,6 +5,7 @@ import { toast } from "sonner";
 import { Mail, Lock, AlertCircle, ArrowLeft, CheckCircle2 } from "lucide-react";
 import logo from "@/assets/qblink-logo.png";
 import SEO from "@/components/SEO";
+import { rateLimiter, getRateLimitMessage } from "@/lib/rateLimit";
 
 type Step = "email" | "otp" | "done";
 
@@ -33,6 +34,17 @@ const ForgotPassword = () => {
       setErrorMsg("Enter a valid email address.");
       return;
     }
+
+    // Rate limit OTP requests per email
+    const limitCheck = rateLimiter.check("auth:forgot-password", clean);
+    if (!limitCheck.allowed) {
+      const msg = getRateLimitMessage("auth:forgot-password", limitCheck.remainingSec);
+      setErrorMsg(msg);
+      toast.error(msg);
+      return;
+    }
+    rateLimiter.record("auth:forgot-password", clean);
+
     setLoading(true);
     const { error } = await supabase.auth.signInWithOtp({
       email: clean,

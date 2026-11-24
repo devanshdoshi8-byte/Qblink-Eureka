@@ -7,6 +7,8 @@
  * GUARANTEE: Zero database mutations. Zero production table writes.
  */
 
+import { cryptoSecureToken } from "@/lib/securitySuite";
+
 export type IndustryType = "clinic" | "cafe" | "salon" | "counter";
 
 export interface IndustryConfig {
@@ -147,7 +149,7 @@ export function callNextVisitor(state: PitchSimulatorState): PitchSimulatorState
 
   const newActivity = [
     {
-      id: `act-${Date.now()}-${Math.random()}`,
+      id: `act-${Date.now()}-${cryptoSecureToken(4)}`,
       text: `Token ${activeNowServing.token} (${activeNowServing.name}) called to ${state.counterName}`,
       time: "Just now",
     },

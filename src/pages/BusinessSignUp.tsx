@@ -9,6 +9,7 @@ import SEO from "@/components/SEO";
 import { GoogleButton, AuthDivider } from "@/components/auth/GooglePickerModal";
 import { signInWithGoogle, ensureRoleAndProfile } from "@/lib/auth/authService";
 import { INDUSTRIES, getIndustryDefaults, type IndustryDefaults } from "@/lib/industryDefaults";
+import { rateLimiter, getRateLimitMessage } from "@/lib/rateLimit";
 
 const ALERT_LABELS: Record<string, string> = {
   doctor_delay: "Doctor Delay Alerts",
@@ -49,6 +50,12 @@ const BusinessSignUp = () => {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    const limitCheck = rateLimiter.check("auth:signup", email);
+    if (!limitCheck.allowed) {
+      toast.error(getRateLimitMessage("auth:signup", limitCheck.remainingSec));
+      return;
+    }
+    rateLimiter.record("auth:signup", email);
     setLoading(true);
     try {
       const { data, error } = await supabase.auth.signUp({

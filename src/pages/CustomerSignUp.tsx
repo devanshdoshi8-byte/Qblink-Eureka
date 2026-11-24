@@ -9,6 +9,8 @@ import SEO from "@/components/SEO";
 import { COUNTRY_CODES, normalizePhone, phoneToEmail, isValidPhone } from "@/lib/phoneAuth";
 import { GoogleButton, AuthDivider } from "@/components/auth/GooglePickerModal";
 import { signInWithGoogle } from "@/lib/auth/authService";
+import { sanitizeRedirectUrl } from "@/lib/security";
+import { rateLimiter, getRateLimitMessage } from "@/lib/rateLimit";
 
 const CustomerSignUp = () => {
   const [mode, setMode] = useState<"phone" | "email">("phone");
@@ -25,7 +27,7 @@ const CustomerSignUp = () => {
   const { user } = useAuth();
 
   const nextUrl = searchParams.get("next");
-  const safeNext = nextUrl && nextUrl.startsWith("/") && !nextUrl.startsWith("//") ? nextUrl : null;
+  const safeNext = nextUrl ? sanitizeRedirectUrl(nextUrl, "") : null;
 
   useEffect(() => {
     if (user) navigate(safeNext || "/customer-dashboard");
@@ -63,6 +65,15 @@ const CustomerSignUp = () => {
   };
 
   const createAccount = async (loginEmail: string, phoneNumber: string | null) => {
+    const limitCheck = rateLimiter.check("auth:signup", loginEmail);
+    if (!limitCheck.allowed) {
+      const msg = getRateLimitMessage("auth:signup", limitCheck.remainingSec);
+      setFormError(msg);
+      toast.error(msg);
+      return;
+    }
+    rateLimiter.record("auth:signup", loginEmail);
+
     setLoading(true);
     try {
       const { data, error } = await supabase.auth.signUp({
